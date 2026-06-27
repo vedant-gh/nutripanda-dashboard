@@ -61,21 +61,11 @@ export default function DashboardLayout({
     <>
       {/* Branding */}
       <div className="p-6 pb-4">
-        <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-green">
-            <span className="text-lg font-bold text-white" style={{ fontFamily: 'var(--font-heading)' }}>
-              N
-            </span>
-          </div>
-          <div>
-            <h2 className="text-lg font-bold tracking-tight text-gray-900" style={{ fontFamily: 'var(--font-heading)' }}>
-              NutriPanda
-            </h2>
-            <p className="text-[11px] font-medium uppercase tracking-widest text-gray-400">
-              Admin
-            </p>
-          </div>
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src="/logo.png" alt="NutriPanda" className="h-9 w-auto" />
+        <p className="mt-2 text-[11px] font-medium uppercase tracking-widest text-gray-400">
+          Admin
+        </p>
       </div>
 
       {/* Nav */}
@@ -98,10 +88,7 @@ export default function DashboardLayout({
                 <Icon className="h-5 w-5 shrink-0" />
                 {item.label}
                 {active && (
-                  <motion.div
-                    layoutId="nav-indicator"
-                    className="ml-auto h-1.5 w-1.5 rounded-full bg-brand-green"
-                  />
+                  <span className="ml-auto h-1.5 w-1.5 rounded-full bg-brand-green" />
                 )}
               </Link>
             )

@@ -119,10 +119,12 @@ function buildInvoiceHtml(order: Order, logoUrl: string): string {
   .pay { margin-top: 30px; font-size: 11px; color: #9ca3af; line-height: 1.7; }
   .pay span { color: #6b7280; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
   .foot { margin-top: 36px; padding-top: 16px; border-top: 1px solid #e5e7eb; text-align: center; font-size: 11px; color: #9ca3af; }
-  @page { size: A4 portrait; margin: 14mm; }
+  @page { size: A4 portrait; margin: 12mm; }
   @media print {
+    /* Bake the breathing room into the sheet itself so it survives even when
+       the browser print dialog is set to "Margins: None". */
     body { padding: 0; }
-    .sheet { max-width: 100%; padding-top: 18px; }
+    .sheet { max-width: 100%; padding: 32px 36px 28px; }
   }
 </style>
 </head>
