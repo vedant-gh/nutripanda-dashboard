@@ -15,11 +15,12 @@ import {
   Download,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getOrder, updateOrder } from '@/lib/api'
+import { getOrder, updateOrder, createShipment } from '@/lib/api'
 import type { Order } from '@/lib/types'
 import { formatPrice, formatDateTime } from '@/lib/utils'
 import { downloadInvoice } from '@/lib/invoice'
 import { PaymentBadge, OrderBadge } from '@/components/ui/Badge'
+import ConfirmModal from '@/components/ui/ConfirmModal'
 
 const STATUS_OPTIONS: Order['order_status'][] = [
   'confirmed', 'processing', 'shipped', 'delivered', 'cancelled',
@@ -44,6 +45,8 @@ export default function OrderDetailPage() {
   const [notes, setNotes] = useState('')
   const [sendNotification, setSendNotification] = useState(true)
   const [updating, setUpdating] = useState(false)
+  const [shipping, setShipping] = useState(false)
+  const [confirmShipOpen, setConfirmShipOpen] = useState(false)
 
   useEffect(() => {
     getOrder(id)
@@ -71,6 +74,21 @@ export default function OrderDetailPage() {
       toast.error(err instanceof Error ? err.message : 'Update failed')
     } finally {
       setUpdating(false)
+    }
+  }
+
+  async function handleCreateShipment() {
+    if (!order) return
+    setShipping(true)
+    try {
+      const data = await createShipment(order.id)
+      setOrder(data.order)
+      setConfirmShipOpen(false)
+      toast.success(`Shipment created — AWB ${data.order.awb_number}`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to create shipment')
+    } finally {
+      setShipping(false)
     }
   }
 
@@ -271,6 +289,54 @@ export default function OrderDetailPage() {
 
         {/* Right column — actions */}
         <div className="space-y-6">
+          {/* Shipment */}
+          <div className="rounded-2xl border border-gray-200 bg-white p-5">
+            <h2 className="mb-4 text-sm font-semibold text-gray-900">Shipment</h2>
+            {order.awb_number ? (
+              <div className="space-y-2.5 text-sm">
+                <div className="flex justify-between">
+                  <span className="text-gray-500">Courier</span>
+                  <span className="font-medium text-gray-900">{order.courier_name || '—'}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-gray-500">AWB</span>
+                  <span className="font-mono text-xs text-gray-900">{order.awb_number}</span>
+                </div>
+                {order.shipment_status && (
+                  <div className="flex justify-between">
+                    <span className="text-gray-500">Status</span>
+                    <span className="font-medium text-gray-900">{order.shipment_status}</span>
+                  </div>
+                )}
+                {order.shipping_label_url && (
+                  <a
+                    href={order.shipping_label_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 flex items-center justify-center gap-2 rounded-full border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 transition-colors hover:border-gray-900 hover:text-gray-900"
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Download Label
+                  </a>
+                )}
+              </div>
+            ) : (
+              <>
+                <p className="mb-3 text-xs text-gray-500">
+                  Books a real courier pickup via Proship and generates the AWB + shipping label.
+                </p>
+                <button
+                  onClick={() => setConfirmShipOpen(true)}
+                  disabled={shipping}
+                  className="flex w-full items-center justify-center gap-2 rounded-full bg-brand-green px-6 py-2.5 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50"
+                >
+                  <Truck className="h-4 w-4" />
+                  Create Shipment
+                </button>
+              </>
+            )}
+          </div>
+
           {/* Update Status */}
           <div className="rounded-2xl border border-gray-200 bg-white p-5">
             <h2 className="mb-4 text-sm font-semibold text-gray-900">Update Status</h2>
@@ -331,6 +397,23 @@ export default function OrderDetailPage() {
           </div>
         </div>
       </div>
+
+      <ConfirmModal
+        open={confirmShipOpen}
+        loading={shipping}
+        title="Create a real Proship shipment?"
+        description={
+          <>
+            This books an <strong>actual courier pickup</strong> for order{' '}
+            <strong>{order.order_number}</strong> and incurs shipping charges. Test-mode
+            Razorpay payments still create real shipments.
+          </>
+        }
+        confirmLabel="Create Shipment"
+        cancelLabel="Cancel"
+        onConfirm={handleCreateShipment}
+        onCancel={() => setConfirmShipOpen(false)}
+      />
     </>
   )
 }

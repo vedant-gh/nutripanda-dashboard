@@ -78,6 +78,13 @@ export async function updateOrder(id: string, data: {
   })
 }
 
+// Create a real Proship shipment for an order (books a courier pickup + AWB).
+export async function createShipment(id: string) {
+  return apiFetch<{ order: import('./types').Order }>(`/api/admin/orders/${id}/ship`, {
+    method: 'POST',
+  })
+}
+
 // ── Products ──
 
 export async function getProducts() {
