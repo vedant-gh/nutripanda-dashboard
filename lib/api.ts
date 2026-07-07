@@ -85,6 +85,13 @@ export async function createShipment(id: string) {
   })
 }
 
+// Permanently delete an order (and its inventory/notification log rows).
+export async function deleteOrder(id: string) {
+  return apiFetch<{ success: boolean }>(`/api/admin/orders/${id}`, {
+    method: 'DELETE',
+  })
+}
+
 // ── Products ──
 
 export async function getProducts() {

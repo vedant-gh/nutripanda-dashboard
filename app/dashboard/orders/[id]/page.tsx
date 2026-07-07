@@ -13,9 +13,10 @@ import {
   Send,
   Save,
   Download,
+  Trash2,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getOrder, updateOrder, createShipment } from '@/lib/api'
+import { getOrder, updateOrder, createShipment, deleteOrder } from '@/lib/api'
 import type { Order } from '@/lib/types'
 import { formatPrice, formatDateTime } from '@/lib/utils'
 import { downloadInvoice } from '@/lib/invoice'
@@ -47,6 +48,8 @@ export default function OrderDetailPage() {
   const [updating, setUpdating] = useState(false)
   const [shipping, setShipping] = useState(false)
   const [confirmShipOpen, setConfirmShipOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
 
   useEffect(() => {
     getOrder(id)
@@ -89,6 +92,19 @@ export default function OrderDetailPage() {
       toast.error(err instanceof Error ? err.message : 'Failed to create shipment')
     } finally {
       setShipping(false)
+    }
+  }
+
+  async function handleDeleteOrder() {
+    if (!order) return
+    setDeleting(true)
+    try {
+      await deleteOrder(order.id)
+      toast.success('Order deleted')
+      router.push('/dashboard/orders')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to delete order')
+      setDeleting(false)
     }
   }
 
@@ -395,6 +411,22 @@ export default function OrderDetailPage() {
               Save Notes
             </button>
           </div>
+
+          {/* Danger zone — delete order */}
+          <div className="rounded-2xl border border-red-200 bg-red-50/40 p-5">
+            <h2 className="mb-1 text-sm font-semibold text-red-900">Danger Zone</h2>
+            <p className="mb-3 text-xs text-red-700/80">
+              Permanently delete this order and its log entries. This cannot be undone.
+            </p>
+            <button
+              onClick={() => setConfirmDeleteOpen(true)}
+              disabled={deleting}
+              className="flex w-full items-center justify-center gap-2 rounded-full border border-red-300 bg-white px-6 py-2.5 text-sm font-semibold text-red-600 transition-colors hover:border-red-600 hover:bg-red-600 hover:text-white disabled:opacity-50"
+            >
+              <Trash2 className="h-4 w-4" />
+              Delete Order
+            </button>
+          </div>
         </div>
       </div>
 
@@ -413,6 +445,23 @@ export default function OrderDetailPage() {
         cancelLabel="Cancel"
         onConfirm={handleCreateShipment}
         onCancel={() => setConfirmShipOpen(false)}
+      />
+
+      <ConfirmModal
+        open={confirmDeleteOpen}
+        loading={deleting}
+        title="Delete this order?"
+        description={
+          <>
+            This permanently removes order <strong>{order.order_number}</strong> and its
+            log entries. This <strong>cannot be undone</strong>, and product stock is not
+            restored.
+          </>
+        }
+        confirmLabel="Delete Order"
+        cancelLabel="Cancel"
+        onConfirm={handleDeleteOrder}
+        onCancel={() => setConfirmDeleteOpen(false)}
       />
     </>
   )
