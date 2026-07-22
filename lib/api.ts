@@ -143,6 +143,22 @@ export async function uploadProductImages(files: File[], productId?: string): Pr
   return data.urls
 }
 
+// Generic image upload (no productId) — returns the uploaded URLs.
+export async function uploadImages(files: File[]): Promise<string[]> {
+  const formData = new FormData()
+  files.forEach((f) => formData.append('files', f))
+
+  const res = await fetch(UPLOAD_URL, {
+    method: 'POST',
+    credentials: 'include',
+    body: formData,
+  })
+
+  const data = await res.json()
+  if (!res.ok) throw new Error(data.error || 'Upload failed')
+  return data.urls
+}
+
 export async function deleteProductImage(url: string, productId?: string) {
   const res = await fetch(UPLOAD_URL, {
     method: 'DELETE',
@@ -154,6 +170,68 @@ export async function deleteProductImage(url: string, productId?: string) {
   const data = await res.json()
   if (!res.ok) throw new Error(data.error || 'Delete failed')
   return data
+}
+
+// ── Blog ──
+
+export async function getBlogPosts() {
+  return apiFetch<{ posts: import('./types').BlogPost[] }>('/api/admin/blog')
+}
+
+export async function getBlogPost(id: string) {
+  return apiFetch<{ post: import('./types').BlogPost }>(`/api/admin/blog/${id}`)
+}
+
+export async function createBlogPost(data: import('./types').BlogPostInput) {
+  return apiFetch<{ post: import('./types').BlogPost }>('/api/admin/blog', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateBlogPost(
+  id: string,
+  data: Partial<import('./types').BlogPostInput>
+) {
+  return apiFetch<{ post: import('./types').BlogPost }>(`/api/admin/blog/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteBlogPost(id: string) {
+  return apiFetch<{ success: boolean }>(`/api/admin/blog/${id}`, {
+    method: 'DELETE',
+  })
+}
+
+// ── Coupons ──
+
+export async function getCoupons() {
+  return apiFetch<{ coupons: import('./types').Coupon[] }>('/api/admin/coupons')
+}
+
+export async function createCoupon(data: import('./types').CouponInput) {
+  return apiFetch<{ coupon: import('./types').Coupon }>('/api/admin/coupons', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function updateCoupon(
+  id: string,
+  data: Partial<import('./types').CouponInput>
+) {
+  return apiFetch<{ coupon: import('./types').Coupon }>(`/api/admin/coupons/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  })
+}
+
+export async function deleteCoupon(id: string) {
+  return apiFetch<{ success: boolean }>(`/api/admin/coupons/${id}`, {
+    method: 'DELETE',
+  })
 }
 
 // ── Inventory ──

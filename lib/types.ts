@@ -112,3 +112,85 @@ export interface InventoryProduct {
   is_active: boolean
   is_coming_soon: boolean
 }
+
+// ── Blog ──
+
+export type BlogBlockType =
+  | 'heading' | 'paragraph' | 'image' | 'imageGrid'
+  | 'quote' | 'list' | 'callout' | 'divider' | 'cta' | 'embed'
+
+export interface BlogBaseBlock { id: string; type: BlogBlockType }
+export interface BlogHeadingBlock extends BlogBaseBlock { type: 'heading'; level: 2 | 3; text: string }
+export interface BlogParagraphBlock extends BlogBaseBlock { type: 'paragraph'; text: string }
+export interface BlogImageBlock extends BlogBaseBlock { type: 'image'; url: string; alt?: string; caption?: string; width?: 'normal' | 'wide' | 'full' }
+export interface BlogImageGridBlock extends BlogBaseBlock { type: 'imageGrid'; columns: 2 | 3; images: { url: string; caption?: string }[] }
+export interface BlogQuoteBlock extends BlogBaseBlock { type: 'quote'; text: string; attribution?: string }
+export interface BlogListBlock extends BlogBaseBlock { type: 'list'; style: 'bullet' | 'number'; items: string[] }
+export interface BlogCalloutBlock extends BlogBaseBlock { type: 'callout'; emoji?: string; title?: string; text: string; tone: 'green' | 'yellow' | 'neutral' }
+export interface BlogDividerBlock extends BlogBaseBlock { type: 'divider' }
+export interface BlogCtaBlock extends BlogBaseBlock { type: 'cta'; label: string; href: string; style?: 'primary' | 'secondary' }
+export interface BlogEmbedBlock extends BlogBaseBlock { type: 'embed'; provider: 'youtube'; url: string; caption?: string }
+export type BlogBlock =
+  | BlogHeadingBlock | BlogParagraphBlock | BlogImageBlock | BlogImageGridBlock
+  | BlogQuoteBlock | BlogListBlock | BlogCalloutBlock | BlogDividerBlock
+  | BlogCtaBlock | BlogEmbedBlock
+
+export interface BlogPost {
+  id: string
+  slug: string
+  title: string
+  excerpt: string | null
+  cover_image_url: string | null
+  content: BlogBlock[]
+  author: string | null
+  tags: string[] | null
+  category: string | null
+  status: 'draft' | 'published'
+  is_featured: boolean
+  reading_time: number | null
+  seo_title: string | null
+  seo_description: string | null
+  published_at: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface BlogPostInput {
+  slug: string
+  title: string
+  excerpt?: string | null
+  cover_image_url?: string | null
+  content: BlogBlock[]
+  author?: string | null
+  tags?: string[]
+  category?: string | null
+  status?: 'draft' | 'published'
+  is_featured?: boolean
+  seo_title?: string | null
+  seo_description?: string | null
+}
+
+export interface Coupon {
+  id: string
+  code: string
+  discount_type: 'percent' | 'fixed'
+  discount_value: number // percent: 1-100; fixed: paise
+  min_subtotal: number // paise
+  max_discount: number | null // paise
+  is_active: boolean
+  expires_at: string | null
+  description: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface CouponInput {
+  code: string
+  discount_type: 'percent' | 'fixed'
+  discount_value: number
+  min_subtotal?: number
+  max_discount?: number | null
+  is_active?: boolean
+  expires_at?: string | null
+  description?: string | null
+}
