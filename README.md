@@ -1,36 +1,64 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NutriPanda Dashboard
 
-## Getting Started
+One dashboard deployment supports two roles:
 
-First, run the development server:
+- `admin` can use every dashboard section.
+- `blog_editor` is sent to `/dashboard/blog`, sees only Blog navigation, and is
+  authorized only for role-scoped blog APIs.
+
+The website/API owns credentials, signed sessions, rate limiting, and every
+server-side authorization check. Hiding dashboard links is not the security
+boundary.
+
+## Local development
+
+Create `.env.local` from `.env.example`, then run the website/API and dashboard
+in separate terminals:
 
 ```bash
+# In nutri-panda (website and API)
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+
+# In nutri-panda-dashboard
+npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+The website/API runs at `http://localhost:3002` and this dashboard runs at
+`http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Login flow
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Everyone opens `http://localhost:3000` (or the production dashboard URL).
+2. The admin enters `ADMIN_PASSWORD`; the email may be left blank for backward
+   compatibility, or may match `ADMIN_EMAIL` when configured.
+3. A blog editor enters one of the configured `BLOG_EDITOR_*_EMAIL` and
+   `BLOG_EDITOR_*_PASSWORD` pairs.
+4. The website/API creates a signed, HTTP-only session containing the role.
+5. Admins land on `/dashboard`; blog editors land on `/dashboard/blog`.
+6. The API rejects a blog editor who manually calls orders, products, coupons,
+   inventory, shipping, or generic product-upload endpoints.
 
-## Learn More
+Configure account credentials, `DASHBOARD_SESSION_SECRET`, `RATE_LIMIT_SECRET`,
+`ORDER_ACCESS_SECRET`, and `ADMIN_DASHBOARD_URL` on the website/API deployment.
+See `DASHBOARD_ACCESS.md` in that repository for the complete setup and required
+Supabase migrations.
 
-To learn more about Next.js, take a look at the following resources:
+## Production
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Set the existing dashboard deployment to the public website/API origin:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```env
+NEXT_PUBLIC_API_URL=https://nutripanda.in
+```
 
-## Deploy on Vercel
+Use an `admin.nutripanda.in`-style custom domain for the same dashboard
+deployment when possible. Keeping both apps under the same parent site improves
+credentialed-cookie compatibility; it does not require a second deployment.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Before releasing, run:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+npm run lint
+npx tsc --noEmit
+npm run build
+```

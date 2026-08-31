@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { ArrowLeft, Save, Trash2, Plus, X, Upload, ImageIcon } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { getProduct, createProduct, updateProduct, deleteProduct, uploadProductImages, deleteProductImage } from '@/lib/api'
+import { getProduct, createProduct, updateProduct, deleteProduct, uploadProductImages, deleteProductImage, adjustStock } from '@/lib/api'
 import type { Product, Ingredient, NutritionField } from '@/lib/types'
 import { slugify, PRODUCT_COLORS } from '@/lib/utils'
 
@@ -70,6 +70,7 @@ export default function ProductEditPage() {
   const [status, setStatus] = useState<ProductStatus>('active')
   const [isFeatured, setIsFeatured] = useState(false)
   const [inventoryCount, setInventoryCount] = useState('0')
+  const [originalInventoryCount, setOriginalInventoryCount] = useState(0)
   const [seoTitle, setSeoTitle] = useState('')
   const [seoDescription, setSeoDescription] = useState('')
   const [trustBadges, setTrustBadges] = useState<string[]>([])
@@ -100,6 +101,7 @@ export default function ProductEditPage() {
           setStatus(p.is_coming_soon ? 'coming_soon' : p.is_active ? 'active' : 'inactive')
           setIsFeatured(p.is_featured)
           setInventoryCount(String(p.inventory_count))
+          setOriginalInventoryCount(p.inventory_count)
           setSeoTitle(p.seo_title || '')
           setSeoDescription(p.seo_description || '')
           setTrustBadges(p.trust_badges || [])
@@ -164,7 +166,21 @@ export default function ProductEditPage() {
         toast.success('Product created')
         router.replace(`/dashboard/products/${data.product.id}`)
       } else {
-        await updateProduct(id, payload)
+        const productFields = { ...payload }
+        delete productFields.inventory_count
+        await updateProduct(id, productFields)
+
+        const desiredInventory = Number(inventoryCount)
+        const inventoryDelta = desiredInventory - originalInventoryCount
+        if (inventoryDelta !== 0) {
+          await adjustStock({
+            product_id: id,
+            quantity_change: inventoryDelta,
+            change_type: inventoryDelta > 0 ? 'restock' : 'adjustment',
+            notes: 'Adjusted from the product editor',
+          })
+          setOriginalInventoryCount(desiredInventory)
+        }
         toast.success('Product updated')
       }
     } catch (err) {
@@ -409,6 +425,8 @@ export default function ProductEditPage() {
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
               {images.map((url, i) => (
                 <div key={i} className="group relative aspect-square overflow-hidden rounded-xl border border-gray-200 bg-gray-50">
+                  {/* Admin-entered URLs can use arbitrary hosts, so an optimized Next image is not safe here. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
                   <img src={url} alt={`Product ${i + 1}`} className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).src = '' ; (e.target as HTMLImageElement).style.display = 'none' }} />
                   <div className="absolute inset-0 flex items-center justify-center bg-gray-100" style={{ zIndex: 0 }}>
                     <ImageIcon className="h-8 w-8 text-gray-300" />

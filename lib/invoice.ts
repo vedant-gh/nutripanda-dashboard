@@ -17,7 +17,10 @@ const GST_RATE = 5
 // Prices are GST-inclusive, so the tax is extracted from the total — the amount
 // the customer pays never changes.
 function computeGst(order: Order) {
-  const inclusiveGoods = Math.max(0, order.total_amount - order.shipping_cost)
+  const inclusiveGoods = Math.max(
+    0,
+    order.total_amount - order.shipping_cost - order.cod_fee
+  )
   const taxableValue = Math.round(inclusiveGoods / (1 + GST_RATE / 100))
   const totalGst = inclusiveGoods - taxableValue
   const cgst = Math.floor(totalGst / 2)
@@ -64,6 +67,11 @@ function buildInvoiceHtml(order: Order, logoUrl: string): string {
   const discountRow =
     order.discount > 0
       ? `<tr><td class="label">Discount</td><td class="num discount">-${formatPrice(order.discount)}</td></tr>`
+      : ''
+
+  const codFeeRow =
+    order.cod_fee > 0
+      ? `<tr><td class="label">COD Fee</td><td class="num">${formatPrice(order.cod_fee)}</td></tr>`
       : ''
 
   const gst = computeGst(order)
@@ -138,6 +146,7 @@ function buildInvoiceHtml(order: Order, logoUrl: string): string {
       <div class="meta">Date: ${escapeHtml(formatDateTime(order.created_at))}</div>
       <div class="badges">
         <span class="badge ${order.payment_status === 'paid' ? 'paid' : 'unpaid'}">${escapeHtml(order.payment_status)}</span>
+        <span class="badge unpaid">${escapeHtml(order.payment_method === 'cod' ? 'Cash on delivery' : 'Prepaid')}</span>
       </div>
     </div>
 
@@ -172,6 +181,7 @@ function buildInvoiceHtml(order: Order, logoUrl: string): string {
       <tr><td class="label">Subtotal</td><td class="num">${formatPrice(order.subtotal)}</td></tr>
       <tr><td class="label">Shipping</td><td class="num">${order.shipping_cost === 0 ? 'Free' : formatPrice(order.shipping_cost)}</td></tr>
       ${discountRow}
+      ${codFeeRow}
       <tr class="grand"><td class="label">Total</td><td class="num">${formatPrice(order.total_amount)}</td></tr>
     </table>
 

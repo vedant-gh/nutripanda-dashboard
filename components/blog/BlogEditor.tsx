@@ -6,7 +6,7 @@ import {
   ArrowLeft, Save, Send, Upload, X, ChevronDown, ChevronRight,
 } from 'lucide-react'
 import toast from 'react-hot-toast'
-import { createBlogPost, updateBlogPost, uploadImages } from '@/lib/api'
+import { createBlogPost, updateBlogPost, uploadBlogImages } from '@/lib/api'
 import type { BlogPost, BlogPostInput, BlogBlock } from '@/lib/types'
 import { slugify } from '@/lib/utils'
 import BlockEditor from './BlockEditor'
@@ -81,7 +81,7 @@ export default function BlogEditor({ post }: { post?: BlogPost }) {
     }
     setUploadingCover(true)
     try {
-      const urls = await uploadImages([list[0]])
+      const urls = await uploadBlogImages([list[0]])
       if (urls[0]) setCoverImage(urls[0])
       toast.success('Cover image uploaded')
     } catch (err) {

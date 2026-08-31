@@ -17,6 +17,7 @@ import {
 } from 'lucide-react'
 import { useState } from 'react'
 import { useAuth } from '@/lib/auth-context'
+import type { DashboardRole } from '@/lib/api'
 
 const NAV_ITEMS = [
   { label: 'Overview', href: '/dashboard', icon: LayoutDashboard },
@@ -27,62 +28,52 @@ const NAV_ITEMS = [
   { label: 'Inventory', href: '/dashboard/inventory', icon: BarChart3 },
 ]
 
-export default function DashboardLayout({
-  children,
+function isBlogDashboardPath(pathname: string) {
+  return pathname === '/dashboard/blog' || pathname.startsWith('/dashboard/blog/')
+}
+
+function isActivePath(pathname: string, href: string) {
+  if (href === '/dashboard') return pathname === '/dashboard'
+  return pathname.startsWith(href)
+}
+
+function SidebarContent({
+  role,
+  pathname,
+  onNavigate,
+  onLogout,
 }: {
-  children: React.ReactNode
+  role: DashboardRole | null
+  pathname: string
+  onNavigate: () => void
+  onLogout: () => void
 }) {
-  const { isAuthenticated, isLoading, logout } = useAuth()
-  const router = useRouter()
-  const pathname = usePathname()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const navItems = role === 'blog_editor'
+    ? NAV_ITEMS.filter((item) => item.href === '/dashboard/blog')
+    : NAV_ITEMS
 
-  useEffect(() => {
-    if (!isLoading && !isAuthenticated) {
-      router.replace('/')
-    }
-  }, [isLoading, isAuthenticated, router])
-
-  if (isLoading || !isAuthenticated) {
-    return (
-      <div className="flex h-screen items-center justify-center bg-background">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-brand-green" />
-      </div>
-    )
-  }
-
-  function isActive(href: string) {
-    if (href === '/dashboard') return pathname === '/dashboard'
-    return pathname.startsWith(href)
-  }
-
-  async function handleLogout() {
-    await logout()
-    router.replace('/')
-  }
-
-  const SidebarContent = () => (
+  return (
     <>
       {/* Branding */}
       <div className="p-6 pb-4">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.png" alt="NutriPanda" className="h-9 w-auto" />
         <p className="mt-2 text-[11px] font-medium uppercase tracking-widest text-gray-400">
-          Admin
+          {role === 'blog_editor' ? 'Blog Editor' : 'Admin'}
         </p>
       </div>
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-2">
         <div className="space-y-1">
-          {NAV_ITEMS.map((item) => {
-            const active = isActive(item.href)
+          {navItems.map((item) => {
+            const active = isActivePath(pathname, item.href)
             const Icon = item.icon
             return (
               <Link
                 key={item.href}
                 href={item.href}
-                onClick={() => setSidebarOpen(false)}
+                onClick={onNavigate}
                 className={`flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors ${
                   active
                     ? 'bg-brand-green/10 text-brand-green font-semibold'
@@ -103,7 +94,7 @@ export default function DashboardLayout({
       {/* Bottom */}
       <div className="border-t border-gray-200 p-3">
         <button
-          onClick={handleLogout}
+          onClick={onLogout}
           className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-700"
         >
           <LogOut className="h-5 w-5" />
@@ -112,12 +103,51 @@ export default function DashboardLayout({
       </div>
     </>
   )
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode
+}) {
+  const { isAuthenticated, isLoading, role, logout } = useAuth()
+  const router = useRouter()
+  const pathname = usePathname()
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated) {
+      router.replace('/')
+    } else if (!isLoading && role === 'blog_editor' && !isBlogDashboardPath(pathname)) {
+      router.replace('/dashboard/blog')
+    }
+  }, [isLoading, isAuthenticated, pathname, role, router])
+
+  const isRedirectingEditor = role === 'blog_editor' && !isBlogDashboardPath(pathname)
+
+  if (isLoading || !isAuthenticated || isRedirectingEditor) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-background">
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-gray-200 border-t-brand-green" />
+      </div>
+    )
+  }
+
+  async function handleLogout() {
+    await logout()
+    router.replace('/')
+  }
 
   return (
     <div className="flex h-screen bg-background">
       {/* Desktop sidebar */}
       <aside className="sidebar-pattern hidden w-64 shrink-0 flex-col border-r border-gray-200 bg-white lg:flex">
-        <SidebarContent />
+        <SidebarContent
+          role={role}
+          pathname={pathname}
+          onNavigate={() => setSidebarOpen(false)}
+          onLogout={handleLogout}
+        />
       </aside>
 
       {/* Mobile sidebar overlay */}
@@ -144,7 +174,12 @@ export default function DashboardLayout({
               >
                 <X className="h-5 w-5" />
               </button>
-              <SidebarContent />
+              <SidebarContent
+                role={role}
+                pathname={pathname}
+                onNavigate={() => setSidebarOpen(false)}
+                onLogout={handleLogout}
+              />
             </motion.aside>
           </>
         )}
@@ -161,7 +196,7 @@ export default function DashboardLayout({
             <Menu className="h-5 w-5" />
           </button>
           <h1 className="text-sm font-bold text-gray-900" style={{ fontFamily: 'var(--font-heading)' }}>
-            NutriPanda Admin
+            {role === 'blog_editor' ? 'NutriPanda Blog' : 'NutriPanda Admin'}
           </h1>
         </header>
 

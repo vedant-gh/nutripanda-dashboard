@@ -2,13 +2,19 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { Lock, Eye, EyeOff, ArrowRight } from 'lucide-react'
+import { Lock, Mail, Eye, EyeOff, ArrowRight } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useAuth } from '@/lib/auth-context'
+import type { DashboardRole } from '@/lib/api'
+
+function dashboardHome(role: DashboardRole) {
+  return role === 'blog_editor' ? '/dashboard/blog' : '/dashboard'
+}
 
 export default function LoginPage() {
-  const { isAuthenticated, isLoading, login } = useAuth()
+  const { isAuthenticated, isLoading, user, login } = useAuth()
   const router = useRouter()
+  const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
@@ -16,10 +22,10 @@ export default function LoginPage() {
 
   // Redirect if already authenticated
   useEffect(() => {
-    if (isAuthenticated && !isLoading) {
-      router.replace('/dashboard')
+    if (isAuthenticated && user && !isLoading) {
+      router.replace(dashboardHome(user.role))
     }
-  }, [isAuthenticated, isLoading, router])
+  }, [isAuthenticated, isLoading, router, user])
 
   if (isAuthenticated && !isLoading) {
     return null
@@ -33,10 +39,10 @@ export default function LoginPage() {
     setLoading(true)
 
     try {
-      await login(password)
-      router.push('/dashboard')
+      const authenticatedUser = await login(email.trim() || undefined, password)
+      router.replace(dashboardHome(authenticatedUser.role))
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Invalid password')
+      setError(err instanceof Error ? err.message : 'Invalid email or password')
     } finally {
       setLoading(false)
     }
@@ -91,40 +97,69 @@ export default function LoginPage() {
 
         {/* Login Card */}
         <div className="rounded-2xl border border-gray-200 bg-white p-8 shadow-sm">
-          <form onSubmit={handleSubmit}>
-            <label
-              htmlFor="password"
-              className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-500"
-            >
-              Password
-            </label>
-            <div className="relative">
-              <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
-                <Lock className="h-4 w-4 text-gray-400" />
-              </div>
-              <input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => { setPassword(e.target.value); setError('') }}
-                placeholder="Enter admin password"
-                autoFocus
-                className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-11 pr-12 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-green focus:outline-none focus:ring-1 focus:ring-brand-green"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label
+                htmlFor="email"
+                className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-500"
               >
-                {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-              </button>
+                Email <span className="font-normal normal-case tracking-normal text-gray-400">(blog editors)</span>
+              </label>
+              <div className="relative">
+                <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
+                  <Mail className="h-4 w-4 text-gray-400" />
+                </div>
+                <input
+                  id="email"
+                  type="email"
+                  value={email}
+                  onChange={(e) => { setEmail(e.target.value); setError('') }}
+                  placeholder="you@example.com"
+                  autoComplete="username"
+                  autoFocus
+                  className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-11 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-green focus:outline-none focus:ring-1 focus:ring-brand-green"
+                />
+              </div>
+              <p className="mt-1.5 text-xs text-gray-400">Admin can leave this blank.</p>
+            </div>
+
+            <div>
+              <label
+                htmlFor="password"
+                className="mb-2 block text-xs font-semibold uppercase tracking-wider text-gray-500"
+              >
+                Password
+              </label>
+              <div className="relative">
+                <div className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2">
+                  <Lock className="h-4 w-4 text-gray-400" />
+                </div>
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => { setPassword(e.target.value); setError('') }}
+                  placeholder="Enter your password"
+                  autoComplete="current-password"
+                  className="w-full rounded-xl border border-gray-300 bg-white py-3 pl-11 pr-12 text-sm text-gray-900 placeholder:text-gray-400 focus:border-brand-green focus:outline-none focus:ring-1 focus:ring-brand-green"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-2 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center text-gray-400 transition-colors hover:text-gray-600"
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
             {error && (
               <motion.p
                 initial={{ opacity: 0, y: -4 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="mt-3 text-sm text-red-500"
+                className="text-sm text-red-500"
+                role="alert"
               >
                 {error}
               </motion.p>
@@ -133,7 +168,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading || !password.trim()}
-              className="group mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-brand-green px-8 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="group flex w-full items-center justify-center gap-2 rounded-full bg-brand-green px-8 py-3 text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? (
                 <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />

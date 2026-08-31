@@ -3,7 +3,11 @@ import type { Order, Product } from './types'
 type Cell = string | number | null | undefined
 
 function escapeCell(value: Cell): string {
-  const s = value == null ? '' : String(value)
+  const raw = value == null ? '' : String(value)
+  // Prevent spreadsheet programs from interpreting customer-controlled cells
+  // as formulas when the CSV is opened. The apostrophe is Excel/Sheets' text
+  // marker and is not executed as part of the cell value.
+  const s = /^[=+\-@\t\r]/.test(raw) ? `'${raw}` : raw
   // Quote when the value contains a delimiter, quote, or newline.
   if (/[",\n\r]/.test(s)) {
     return `"${s.replace(/"/g, '""')}"`
@@ -35,8 +39,8 @@ const rupees = (paise: number) => (paise / 100).toFixed(2)
 export function exportOrdersCsv(orders: Order[], filename = 'orders.csv'): void {
   const headers = [
     'Order Number', 'Date', 'Customer', 'Email', 'Phone',
-    'Items', 'Subtotal (₹)', 'Shipping (₹)', 'Discount (₹)', 'Total (₹)',
-    'Payment Status', 'Order Status', 'Razorpay Order ID', 'Razorpay Payment ID',
+    'Items', 'Subtotal (₹)', 'Shipping (₹)', 'Discount (₹)', 'COD Fee (₹)', 'Total (₹)',
+    'Payment Method', 'Payment Status', 'Order Status', 'Razorpay Order ID', 'Razorpay Payment ID',
     'Shipping Address',
   ]
   const rows = orders.map((o) => [
@@ -49,7 +53,9 @@ export function exportOrdersCsv(orders: Order[], filename = 'orders.csv'): void 
     rupees(o.subtotal),
     rupees(o.shipping_cost),
     rupees(o.discount),
+    rupees(o.cod_fee),
     rupees(o.total_amount),
+    o.payment_method,
     o.payment_status,
     o.order_status,
     o.razorpay_order_id ?? '',

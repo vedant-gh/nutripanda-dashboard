@@ -1,4 +1,16 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000'
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3002'
+
+export type DashboardRole = 'admin' | 'blog_editor'
+
+export interface DashboardUser {
+  id: string
+  name: string
+  role: DashboardRole
+}
+
+export type AuthSession =
+  | { authenticated: true; user: DashboardUser }
+  | { authenticated: false; user: null }
 
 async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${API_URL}${path}`, {
@@ -21,15 +33,22 @@ async function apiFetch<T>(path: string, options?: RequestInit): Promise<T> {
 
 // ── Auth ──
 
-export async function login(password: string) {
-  return apiFetch<{ success: boolean }>('/api/admin/auth', {
+export async function login(email: string | undefined, password: string) {
+  return apiFetch<{
+    success: true
+    authenticated: true
+    user: DashboardUser
+  }>('/api/admin/auth', {
     method: 'POST',
-    body: JSON.stringify({ password }),
+    body: JSON.stringify({
+      ...(email ? { email } : {}),
+      password,
+    }),
   })
 }
 
 export async function checkAuth() {
-  return apiFetch<{ authenticated: boolean }>('/api/admin/auth')
+  return apiFetch<AuthSession>('/api/admin/auth')
 }
 
 export async function logout() {
@@ -68,7 +87,13 @@ export async function getOrder(id: string) {
 }
 
 export async function updateOrder(id: string, data: {
-  order_status: string
+  action?:
+    | 'confirm_return_inventory'
+    | 'confirm_no_legacy_shipment'
+    | 'record_prepaid_refund'
+    | 'resolve_inventory_reconciliation'
+  order_status?: string
+  payment_status?: 'paid' | 'refunded'
   notes?: string
   send_notification?: boolean
 }) {
@@ -78,16 +103,42 @@ export async function updateOrder(id: string, data: {
   })
 }
 
-// Create a real Proship shipment for an order (books a courier pickup + AWB).
-export async function createShipment(id: string) {
-  return apiFetch<{ order: import('./types').Order }>(`/api/admin/orders/${id}/ship`, {
-    method: 'POST',
+export async function confirmReturnInventory(id: string) {
+  return updateOrder(id, { action: 'confirm_return_inventory' })
+}
+
+export async function confirmNoLegacyShipment(id: string) {
+  return updateOrder(id, { action: 'confirm_no_legacy_shipment' })
+}
+
+export async function resolveInventoryReconciliation(id: string, notes?: string) {
+  return updateOrder(id, {
+    action: 'resolve_inventory_reconciliation',
+    notes,
   })
 }
 
-// Permanently delete an order (and its inventory/notification log rows).
+export async function recordDeliveredPrepaidRefund(id: string) {
+  return updateOrder(id, { action: 'record_prepaid_refund' })
+}
+
+// Create a real Proship shipment for an order (books a courier pickup + AWB).
+export async function createShipment(id: string, action: 'create' | 'sync' = 'create') {
+  return apiFetch<{ order: import('./types').Order }>(`/api/admin/orders/${id}/ship`, {
+    method: 'POST',
+    body: JSON.stringify({ action }),
+  })
+}
+
+// Safely cancel an order while preserving its audit and financial records.
 export async function deleteOrder(id: string) {
-  return apiFetch<{ success: boolean }>(`/api/admin/orders/${id}`, {
+  return apiFetch<{
+    success: boolean
+    refund_required: boolean
+    soft_deleted?: true
+    order: import('./types').Order
+    error?: string
+  }>(`/api/admin/orders/${id}`, {
     method: 'DELETE',
   })
 }
@@ -126,6 +177,7 @@ export async function deleteProduct(id: string, permanent = false) {
 // ── Image Upload ──
 
 const UPLOAD_URL = `${API_URL}/api/admin/upload`
+const BLOG_UPLOAD_URL = `${API_URL}/api/admin/blog/upload`
 
 export async function uploadProductImages(files: File[], productId?: string): Promise<string[]> {
   const formData = new FormData()
@@ -143,12 +195,13 @@ export async function uploadProductImages(files: File[], productId?: string): Pr
   return data.urls
 }
 
-// Generic image upload (no productId) — returns the uploaded URLs.
-export async function uploadImages(files: File[]): Promise<string[]> {
+// Blog-only image upload. The scoped API route is available to admins and blog editors,
+// while the product upload route remains admin-only.
+export async function uploadBlogImages(files: File[]): Promise<string[]> {
   const formData = new FormData()
   files.forEach((f) => formData.append('files', f))
 
-  const res = await fetch(UPLOAD_URL, {
+  const res = await fetch(BLOG_UPLOAD_URL, {
     method: 'POST',
     credentials: 'include',
     body: formData,
@@ -254,7 +307,8 @@ export async function adjustStock(data: {
     product_id: string
     previous_stock: number
     new_stock: number
-    change: number
+    quantity_change: number
+    log: import('./types').InventoryLog
   }>('/api/admin/inventory', {
     method: 'POST',
     body: JSON.stringify(data),

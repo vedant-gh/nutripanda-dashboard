@@ -1,40 +1,52 @@
 'use client'
 
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { checkAuth, login as apiLogin, logout as apiLogout } from './api'
+import {
+  checkAuth,
+  login as apiLogin,
+  logout as apiLogout,
+  type DashboardRole,
+  type DashboardUser,
+} from './api'
 
 interface AuthContext {
   isAuthenticated: boolean
   isLoading: boolean
-  login: (password: string) => Promise<void>
+  user: DashboardUser | null
+  role: DashboardRole | null
+  login: (email: string | undefined, password: string) => Promise<DashboardUser>
   logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthContext | null>(null)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [user, setUser] = useState<DashboardUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
     checkAuth()
-      .then((data) => setIsAuthenticated(data.authenticated))
-      .catch(() => setIsAuthenticated(false))
+      .then((data) => setUser(data.authenticated ? data.user : null))
+      .catch(() => setUser(null))
       .finally(() => setIsLoading(false))
   }, [])
 
-  async function login(password: string) {
-    await apiLogin(password)
-    setIsAuthenticated(true)
+  async function login(email: string | undefined, password: string) {
+    const data = await apiLogin(email, password)
+    setUser(data.user)
+    return data.user
   }
 
   async function logout() {
     await apiLogout()
-    setIsAuthenticated(false)
+    setUser(null)
   }
 
+  const isAuthenticated = user !== null
+  const role = user?.role ?? null
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ isAuthenticated, isLoading, user, role, login, logout }}>
       {children}
     </AuthContext.Provider>
   )

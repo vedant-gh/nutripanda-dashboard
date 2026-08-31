@@ -9,7 +9,7 @@ import toast from 'react-hot-toast'
 import type {
   BlogBlock, BlogBlockType, BlogImageBlock, BlogImageGridBlock, BlogListBlock,
 } from '@/lib/types'
-import { uploadImages } from '@/lib/api'
+import { uploadBlogImages } from '@/lib/api'
 
 const BLOCK_TYPES: { type: BlogBlockType; label: string; icon: typeof Type }[] = [
   { type: 'heading', label: 'Heading', icon: Heading },
@@ -354,7 +354,7 @@ function ImageBlockFields({
     if (!list.length) return
     setUploading(true)
     try {
-      const urls = await uploadImages([list[0]])
+      const urls = await uploadBlogImages([list[0]])
       if (urls[0]) onUpdate({ url: urls[0] })
       toast.success('Image uploaded')
     } catch (err) {
@@ -442,7 +442,7 @@ function ImageGridBlockFields({
     if (!list.length) return
     setUploading(true)
     try {
-      const urls = await uploadImages(list)
+      const urls = await uploadBlogImages(list)
       onUpdate({ images: [...block.images, ...urls.map((url) => ({ url }))] })
       toast.success(`${urls.length} image${urls.length > 1 ? 's' : ''} uploaded`)
     } catch (err) {

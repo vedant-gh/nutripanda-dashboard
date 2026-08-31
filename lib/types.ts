@@ -54,12 +54,32 @@ export interface Order {
   subtotal: number
   shipping_cost: number
   discount: number
+  cod_fee: number
   total_amount: number
+  payment_method: 'prepaid' | 'cod'
   payment_status: 'pending' | 'paid' | 'failed' | 'refunded'
   order_status: 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
   razorpay_order_id: string | null
   razorpay_payment_id: string | null
   razorpay_signature: string | null
+  payment_refunded_at?: string | null
+  payment_review_required?: boolean
+  payment_review_reason?:
+    | 'late_capture_after_cancellation'
+    | 'checkout_expired_before_capture'
+    | 'inventory_shortfall_after_capture'
+    | 'coupon_reservation_lost_after_capture'
+    | 'capture_after_failed_attempt'
+    | null
+  fulfillment_review_required?: boolean
+  fulfillment_review_reason?:
+    | 'delivered_after_cancellation'
+    | 'return_inventory_pending'
+    | 'legacy_inventory_ledger_mismatch'
+    | 'shipment_while_ineligible'
+    | null
+  inventory_reclaimed_at?: string | null
+  inventory_reclaim_shortfall?: number
   notes: string | null
   // Shipping (Proship)
   proship_order_id?: string | null
@@ -68,6 +88,20 @@ export interface Order {
   shipping_label_url?: string | null
   tracking_url?: string | null
   shipment_status?: string | null
+  shipment_booking_state?:
+    | 'idle'
+    | 'booking'
+    | 'booked'
+    | 'failed'
+    | 'uncertain'
+    | 'cancelling'
+    | 'cancel_uncertain'
+    | 'cancelled'
+    | null
+  shipment_last_error?: string | null
+  shipment_synced_at?: string | null
+  shipment_cancelled_at?: string | null
+  shipment_delivered_at?: string | null
   shipped_at?: string | null
   created_at: string
   updated_at: string
