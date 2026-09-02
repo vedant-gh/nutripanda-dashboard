@@ -11,6 +11,7 @@ import {
   FileText,
   Ticket,
   BarChart3,
+  UserCog,
   LogOut,
   Menu,
   X,
@@ -24,6 +25,7 @@ const NAV_ITEMS = [
   { label: 'Orders', href: '/dashboard/orders', icon: ShoppingCart },
   { label: 'Products', href: '/dashboard/products', icon: Package },
   { label: 'Blog', href: '/dashboard/blog', icon: FileText },
+  { label: 'Blog Access', href: '/dashboard/blog-access', icon: UserCog },
   { label: 'Coupons', href: '/dashboard/coupons', icon: Ticket },
   { label: 'Inventory', href: '/dashboard/inventory', icon: BarChart3 },
 ]

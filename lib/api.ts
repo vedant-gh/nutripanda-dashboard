@@ -57,6 +57,40 @@ export async function logout() {
   })
 }
 
+// ── Blog editor access ──
+
+export async function getDashboardBlogEditors() {
+  return apiFetch<{ editors: import('./types').DashboardBlogEditor[] }>(
+    '/api/admin/blog-editors'
+  )
+}
+
+export async function createDashboardBlogEditor(email: string, password: string) {
+  return apiFetch<{ editor: import('./types').DashboardBlogEditor }>(
+    '/api/admin/blog-editors',
+    {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    }
+  )
+}
+
+export async function updateDashboardBlogEditorPassword(id: string, password: string) {
+  return apiFetch<{ editor: import('./types').DashboardBlogEditor }>(
+    `/api/admin/blog-editors/${id}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ password }),
+    }
+  )
+}
+
+export async function deleteDashboardBlogEditor(id: string) {
+  return apiFetch<{ success: true }>(`/api/admin/blog-editors/${id}`, {
+    method: 'DELETE',
+  })
+}
+
 // ── Orders ──
 
 export async function getOrders(params?: {
@@ -80,6 +114,42 @@ export async function getOrders(params?: {
     limit: number
     offset: number
   }>(`/api/admin/orders${qs ? `?${qs}` : ''}`)
+}
+
+const ADMIN_ORDER_PAGE_SIZE = 100
+
+/**
+ * Load the overview's bounded order history without exceeding the API's
+ * per-request limit. The returned count is the full database count even when
+ * the overview intentionally caps the number of rows used for client-side
+ * statistics.
+ */
+export async function getOrdersForOverview(maxOrders = 1000) {
+  const firstPage = await getOrders({
+    limit: Math.min(ADMIN_ORDER_PAGE_SIZE, maxOrders),
+    offset: 0,
+  })
+  const rowsToLoad = Math.min(firstPage.count, maxOrders)
+  const remainingOffsets: number[] = []
+
+  for (let offset = ADMIN_ORDER_PAGE_SIZE; offset < rowsToLoad; offset += ADMIN_ORDER_PAGE_SIZE) {
+    remainingOffsets.push(offset)
+  }
+
+  const remainingPages = await Promise.all(
+    remainingOffsets.map((offset) => getOrders({
+      limit: Math.min(ADMIN_ORDER_PAGE_SIZE, rowsToLoad - offset),
+      offset,
+    }))
+  )
+
+  return {
+    orders: [
+      ...firstPage.orders,
+      ...remainingPages.flatMap((page) => page.orders),
+    ].slice(0, rowsToLoad),
+    count: firstPage.count,
+  }
 }
 
 export async function getOrder(id: string) {
