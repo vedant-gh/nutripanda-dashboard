@@ -204,6 +204,14 @@ export interface BlogPostInput {
   seo_description?: string | null
 }
 
+export interface DashboardBlogEditor {
+  id: string
+  email: string
+  last_login_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export interface Coupon {
   id: string
   code: string

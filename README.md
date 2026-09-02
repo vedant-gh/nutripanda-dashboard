@@ -6,9 +6,10 @@ One dashboard deployment supports two roles:
 - `blog_editor` is sent to `/dashboard/blog`, sees only Blog navigation, and is
   authorized only for role-scoped blog APIs.
 
-The website/API owns credentials, signed sessions, rate limiting, and every
-server-side authorization check. Hiding dashboard links is not the security
-boundary.
+The website/API owns authentication, signed sessions, rate limiting, and every
+server-side authorization check. The full admin manages blog editor emails and
+passwords from **Blog Access**; salted password hashes and session versions are
+stored in Supabase. Hiding dashboard links is not the security boundary.
 
 ## Local development
 
@@ -31,12 +32,16 @@ The website/API runs at `http://localhost:3002` and this dashboard runs at
 1. Everyone opens `http://localhost:3000` (or the production dashboard URL).
 2. The admin enters `ADMIN_PASSWORD`; the email may be left blank for backward
    compatibility, or may match `ADMIN_EMAIL` when configured.
-3. A blog editor enters one of the configured `BLOG_EDITOR_*_EMAIL` and
-   `BLOG_EDITOR_*_PASSWORD` pairs.
-4. The website/API creates a signed, HTTP-only session containing the role.
-5. Admins land on `/dashboard`; blog editors land on `/dashboard/blog`.
-6. The API rejects a blog editor who manually calls orders, products, coupons,
+3. The admin opens **Blog Access** and creates an editor email/password.
+4. A blog editor enters those assigned credentials on the same login page.
+5. The website/API creates a signed, HTTP-only session containing the role and
+   current database session version.
+6. Admins land on `/dashboard`; blog editors land on `/dashboard/blog`.
+7. The API rejects a blog editor who manually calls orders, products, coupons,
    inventory, shipping, or generic product-upload endpoints.
+
+Deleting an editor immediately revokes their access. Resetting their password
+also invalidates all existing sessions for that editor.
 
 Configure account credentials, `DASHBOARD_SESSION_SECRET`, `RATE_LIMIT_SECRET`,
 `ORDER_ACCESS_SECRET`, and `ADMIN_DASHBOARD_URL` on the website/API deployment.

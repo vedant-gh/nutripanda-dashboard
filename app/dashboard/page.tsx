@@ -13,7 +13,7 @@ import {
   Clock,
 } from 'lucide-react'
 import { motion } from 'framer-motion'
-import { getOrders, getProducts } from '@/lib/api'
+import { getOrdersForOverview, getProducts } from '@/lib/api'
 import type { Order, Product } from '@/lib/types'
 import { formatPrice, formatDate } from '@/lib/utils'
 import { PaymentBadge, OrderBadge } from '@/components/ui/Badge'
@@ -67,10 +67,11 @@ export default function OverviewPage() {
   const [totalOrders, setTotalOrders] = useState(0)
   const [products, setProducts] = useState<Product[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState('')
 
   useEffect(() => {
     Promise.all([
-      getOrders({ limit: STATS_CAP, offset: 0 }),
+      getOrdersForOverview(STATS_CAP),
       getProducts(),
     ])
       .then(([orderData, productData]) => {
@@ -78,7 +79,9 @@ export default function OverviewPage() {
         setTotalOrders(orderData.count)
         setProducts(productData.products)
       })
-      .catch(() => {})
+      .catch((error: unknown) => {
+        setLoadError(error instanceof Error ? error.message : 'Failed to load dashboard data')
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -106,6 +109,33 @@ export default function OverviewPage() {
       <div className="flex items-center justify-center py-20">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-brand-green" />
       </div>
+    )
+  }
+
+  if (loadError) {
+    return (
+      <>
+        <PageHeader
+          title="Overview"
+          description="Store performance at a glance"
+        />
+        <div className="rounded-2xl border border-red-200 bg-red-50 p-6 text-red-800">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" />
+            <div>
+              <h2 className="font-semibold">Dashboard data could not be loaded</h2>
+              <p className="mt-1 text-sm">{loadError}</p>
+              <button
+                type="button"
+                onClick={() => window.location.reload()}
+                className="mt-4 min-h-11 rounded-full bg-red-700 px-5 py-2 text-sm font-semibold text-white transition-opacity hover:opacity-90"
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        </div>
+      </>
     )
   }
 
